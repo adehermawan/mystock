@@ -40,17 +40,49 @@ public class RestApiTestStep{
 	@Before
 	public void init() {
 		loginParam = new LoginRequest();
-		loginParam.setUsernameOrEmail("ade");
-		loginParam.setPassword("rahasia");
+//		loginParam.setUsernameOrEmail("ade");
+//		loginParam.setPassword("rahasia");
 		
 		restTemplate = new TestRestTemplate();
 		headers = new HttpHeaders();
 	}
 	
-	@When("^users input username and password$")
-	public void generate_token() throws Throwable {
-	    String url = "http://localhost:5000" + "/api/auth/signin"; 
 
+    @When("^User signup with the following details$")
+    public void user_signup_with_the_following_detail(DataTable data) throws Throwable {
+    	List<List<String>> obj = data.raw();
+    	signupParam = new SignUpRequest();
+    	signupParam.setName(obj.get(0).get(0));
+    	signupParam.setUsername(obj.get(0).get(1));
+    	signupParam.setEmail(obj.get(0).get(2));
+    	signupParam.setPassword(obj.get(0).get(3));
+    	
+    	String url = "http://localhost:5000" + "/api/auth/signup"; 
+
+		HttpEntity<SignUpRequest> entity = new HttpEntity<SignUpRequest>(signupParam, headers);
+
+		response = restTemplate.exchange(
+				url,
+				HttpMethod.POST, entity, String.class);		
+        
+    }
+
+    @Then("^The server should handle it and return a success status$")
+    public void the_server_should_handle_it_and_return_a_success_status() throws Throwable {
+    	
+    	JSONAssert.assertEquals("{success:true, message:x}", response.getBody(),  
+				  new CustomComparator(
+				  JSONCompareMode.STRICT, 
+				  new Customization("message", 
+				  new RegularExpressionValueMatcher<Object>("(.+)"))));
+    }
+	@When("^users input username \"([^\"]*)\" and password \"([^\"]*)\"$")
+	public void users_input_username_something_and_password_something(String username, String password) throws Throwable {
+	    String url = "http://localhost:5000" + "/api/auth/signin"; 
+		
+	    loginParam.setUsernameOrEmail(username);
+		loginParam.setPassword(password);
+		
 		HttpEntity<LoginRequest> entity = new HttpEntity<LoginRequest>(loginParam, headers);
 
 		response = restTemplate.exchange(
@@ -73,32 +105,22 @@ public class RestApiTestStep{
 		
 	}
 	
-    @When("^User signup with the following details$")
-    public void user_signup_with_the_following_detail(DataTable data) throws Throwable {
-    	List<List<String>> obj = data.raw();
-    	signupParam = new SignUpRequest();
-    	signupParam.setName(obj.get(0).get(0));
-    	signupParam.setUsername(obj.get(0).get(1));
-    	signupParam.setEmail(obj.get(0).get(2));
-    	signupParam.setPassword(obj.get(0).get(3));
-    	
-    	String url = "http://localhost:5000" + "/api/auth/signup"; 
+    
+    @When("^users want to get profile information by username \"([^\"]*)\"$")
+    public void users_want_to_get_profile_information_by_username_something(String username) throws Throwable {
+    	String url = "http://localhost:5000" + "/api/users/"+username; 
 
-		HttpEntity<SignUpRequest> entity = new HttpEntity<SignUpRequest>(signupParam, headers);
-
+//		HttpEntity<SignUpRequest> entity = new HttpEntity<SignUpRequest>(signupParam, headers);
+    	//HttpEntity<String> = new Htt
 		response = restTemplate.exchange(
 				url,
-				HttpMethod.POST, entity, String.class);		
-        
+				HttpMethod.GET, null, String.class);
+		
+		
     }
 
-    @Then("^The server should handle it and return a success status$")
-    public void the_server_should_handle_it_and_return_a_success_status() throws Throwable {
-    	System.out.println(response.getBody());
-    	JSONAssert.assertEquals("{success:true, message:x}", response.getBody(),  
-				  new CustomComparator(
-				  JSONCompareMode.STRICT, 
-				  new Customization("message", 
-				  new RegularExpressionValueMatcher<Object>("(.+)"))));
+    @Then("^the requested data is returned$")
+    public void the_requested_data_is_returned() throws Throwable {
+    	assertThat("status code is incorrect : " + response.getBody(), response.getStatusCodeValue(), is(200));
     }
 }
